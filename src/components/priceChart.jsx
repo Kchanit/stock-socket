@@ -33,7 +33,7 @@ const PriceChart = ({
   }, [historicalData]);
 
   const handleAddToWatchList = () => {
-    addToWatchList(symbol);
+    addToWatchList(symbol, data[data.length - 1].price);
   };
 
   const handleRemoveFromWatchList = () => {

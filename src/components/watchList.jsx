@@ -20,6 +20,7 @@ const Watchlist = ({ watchList, handlePost, getCurrentPrice }) => {
 
     // Clean up the interval when the component unmounts
     return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <div className="flex flex-col text-center rounded-xl  border p-4">
@@ -29,7 +30,7 @@ const Watchlist = ({ watchList, handlePost, getCurrentPrice }) => {
           <StockTile
             key={stock.symbol}
             symbol={stock.symbol}
-            price={stock.price}
+            price={stock.price.toFixed(2)}
             handlePost={handlePost}
           />
         ))

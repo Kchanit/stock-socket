@@ -17,15 +17,17 @@ export default function Home() {
   const [inputStock, setInputStock] = useState("");
   const [stockData, setStockData] = useState([]);
   const [error, setError] = useState("");
-  const [watchList, setWatchlist] = useState(() => {
-    // localStorage.clear();
-    const storedWatchlist = localStorage.getItem(STORAGE_KEY);
-    return storedWatchlist ? JSON.parse(storedWatchlist) : [];
-  });
+  const [watchList, setWatchlist] = useState([]);
 
   useEffect(() => {
     const defaultSymbol = "AAPL";
     socket.emit("get historical", defaultSymbol);
+
+    // Load watchlist from localStorage
+    const storedWatchlist = localStorage.getItem(STORAGE_KEY);
+    if (storedWatchlist) {
+      setWatchlist(JSON.parse(storedWatchlist));
+    }
   }, []);
 
   const handlePost = (e, symbol) => {
@@ -42,10 +44,10 @@ export default function Home() {
     socket.emit("get price", symbol);
   };
 
-  const addToWatchList = (symbol) => {
+  const addToWatchList = (symbol, price) => {
     let stock = {
       symbol,
-      price: null,
+      price: price,
     };
     const updatedWatchList = [...watchList, stock];
     setWatchlist(updatedWatchList);
@@ -61,7 +63,6 @@ export default function Home() {
   };
 
   socket.on("historical", (data) => {
-    console.log(data);
     if (data.length === 0) {
       setError("No stock found");
       return;
@@ -109,7 +110,6 @@ export default function Home() {
           removeFromWatchList={removeFromWatchList}
         />
 
-        {/* Watchlist on the most right */}
         <Watchlist
           className="flex-shrink-0 w-1/3"
           watchList={watchList}

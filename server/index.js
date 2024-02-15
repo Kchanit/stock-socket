@@ -1,11 +1,11 @@
 const express = require("express");
-const app = express();
 const http = require("http");
-const server = http.createServer(app);
+const server = http.createServer(express());
 const socketServ = require("socket.io");
 const io = socketServ(server);
 const axios = require("axios");
 const winston = require("winston");
+const yahooFinance = require("yahoo-finance");
 
 const socketMap = new Map();
 
@@ -13,7 +13,6 @@ const socketMap = new Map();
 const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
-    // winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
     winston.format.errors({ stack: true }),
     winston.format.splat(),
     winston.format.json()
@@ -34,38 +33,31 @@ const logger = winston.createLogger({
 });
 
 io.on("connection", (socket) => {
-  logger.info(`[${getCurrentTimestamp()}] User ${socket.id} connected`);
-
+  const timestamp = getCurrentTimestamp();
+  logger.info(`[${timestamp}] User ${socket.id} connected`);
   socketMap.set(socket.id, socket);
 
   socket.on("get price", async (data) => {
     try {
-      logger.info(
-        `[${getCurrentTimestamp()}] Request ${data} price from: ${socket.id}`
-      );
+      logger.info(`[${timestamp}] Request ${data} price from: ${socket.id}`);
       const result = await getCurrentPrice(data);
       const message = `${data}:${result}`;
       sendMessageToClient(socket.id, "price", message);
     } catch (error) {
-      logger.error(
-        `[${getCurrentTimestamp()}] (500) Error getting price:`,
-        error
-      );
+      logger.error(`[${timestamp}] (500) Error getting price:`, error);
     }
   });
 
   socket.on("get historical", async (data) => {
     try {
       logger.info(
-        `[${getCurrentTimestamp()}] Request ${data} historical from: ${
-          socket.id
-        }`
+        `[${timestamp}] Request ${data} historical from: ${socket.id}`
       );
       const result = await getHistorical(data);
       sendMessageToClient(socket.id, "historical", result);
     } catch (error) {
       logger.error(
-        `[${getCurrentTimestamp()}] (500) Error getting historical data:`,
+        `[${timestamp}] (500) Error getting historical data:`,
         error
       );
     }
@@ -77,32 +69,36 @@ server.listen(port, () =>
   logger.info(`[${getCurrentTimestamp()}] Server is listening on port ${port}`)
 );
 
-var yahooFinance = require("yahoo-finance");
-
 async function getHistorical(stock) {
   if (!stock) {
     logger.warn(`[${getCurrentTimestamp()}] (400) Stock ticker is required`);
-  } else {
-    try {
-      const quotes = await yahooFinance.historical({
-        symbol: stock,
-        from: "2024-01-14",
-        to: "2024-02-15",
-        period: "d",
-      });
-      if (quotes.length === 0) {
-        logger.warn(
-          `[${getCurrentTimestamp()}] (404) No historical data found for ${stock}`
-        );
-      }
-      return quotes.reverse();
-    } catch (err) {
-      logger.error(
-        `[${getCurrentTimestamp()}] (500) Error fetching historical data:`,
-        err
+    return;
+  }
+  try {
+    const today = new Date();
+    const formattedToday = formatDate(today);
+    const formattedFromDate = formatDate(
+      new Date(today.setDate(today.getDate() - 7))
+    );
+    const quotes = await yahooFinance.historical({
+      symbol: stock,
+      from: formattedFromDate,
+      to: formattedToday,
+      period: "d",
+    });
+
+    if (quotes.length === 0) {
+      logger.warn(
+        `[${getCurrentTimestamp()}] (404) No historical data found for ${stock}`
       );
-      return err;
     }
+    return quotes.reverse();
+  } catch (err) {
+    logger.error(
+      `[${getCurrentTimestamp()}] (500) Error fetching historical data:`,
+      err
+    );
+    return err;
   }
 }
 
@@ -133,4 +129,8 @@ function sendMessageToClient(user, topic, message) {
 
 function getCurrentTimestamp() {
   return new Date().toLocaleString();
+}
+
+function formatDate(date) {
+  return date.toISOString().split("T")[0];
 }
