@@ -1,6 +1,6 @@
 # Stock Socket
 
-This project is a stock market monitoring application that enables users to track the historical data and current prices of various stock.
+This project is a stock market monitoring application that enables users to track the historical data and current prices of various stock using Yahoo Finance.
 
 ## Server Side
 
